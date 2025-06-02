@@ -155,6 +155,7 @@ class AuthService {
         phone: user.phone,
         is_admin: user.is_admin,
         level: user.level,
+        referral_code: user.referral_code,
         points: user.points,
         wallet: user.wallet[0]
       }
