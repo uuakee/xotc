@@ -220,8 +220,8 @@ class UserService {
 
     // Listar todos os saques do usuário
     async listWithdrawals(userId) {
-        const withdrawals = await this.prisma.withdrawal.findMany({
-            where: { user_id: userId },
+        const withdrawals = await this.prisma.transaction.findMany({
+            where: { user_id: userId, type: 'WITHDRAWAL' },
             orderBy: { created_at: 'desc' }
         });
         return withdrawals;
