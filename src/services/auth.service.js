@@ -134,6 +134,32 @@ class AuthService {
       token
     };
   }
+
+  async getMe(userId) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        wallet: true
+      }
+    });
+
+    if (!user) {
+      throw new Error('错误: Usuário não encontrado');
+    }
+
+    return {
+      user: {
+        id: user.id,
+        realName: user.realName,
+        cpf: user.cpf,
+        phone: user.phone,
+        is_admin: user.is_admin,
+        level: user.level,
+        points: user.points,
+        wallet: user.wallet[0]
+      }
+    };
+  }
 }
 
 module.exports = new AuthService();

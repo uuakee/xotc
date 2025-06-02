@@ -49,6 +49,15 @@ class AuthController {
       return res.status(400).json({ error: error.message });
     }
   }
+
+  async me(req, res) {
+    try {
+      const result = await authService.getMe(req.user.id);
+      return res.json(result);
+    } catch (error) {
+      return res.status(401).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new AuthController();
