@@ -167,7 +167,7 @@ class UserService {
         const directReferrals = await this.prisma.referral.findMany({
             where: { invited_by_id: userId },
             include: {
-                user: {
+                referred_user: {
                     select: {
                         id: true,
                         realName: true,
@@ -202,11 +202,11 @@ class UserService {
 
         // Formata os referidos com dados relevantes
         const formattedReferrals = directReferrals.map(ref => ({
-            id: ref.user.id,
-            name: ref.user.realName,
-            level: ref.user.level,
-            joined_at: ref.user.created_at,
-            total_invested: ref.user.wallet[0]?.total_investment || 0
+            id: ref.referred_user.id,
+            name: ref.referred_user.realName,
+            level: ref.referred_user.level,
+            joined_at: ref.referred_user.created_at,
+            total_invested: ref.referred_user.wallet[0]?.total_investment || 0
         }));
 
         return {
