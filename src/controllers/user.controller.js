@@ -61,7 +61,15 @@ class UserController {
             return res.status(400).json({ error: error.message });
         }
     }
-}
 
+    async getReferralStats(req, res) {
+        try {
+            const stats = await userService.getReferralStats(req.user.id);
+            return res.json(stats);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+    }
+}
 
 module.exports = new UserController(); 

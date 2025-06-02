@@ -7,8 +7,9 @@ router.use(authMiddleware.authenticate);
 
 router.get('/balance', userController.getBalance);
 router.put('/profile', userController.updateProfile);
-router.post('/investment', userController.buyInvestment);
+router.post('/investments/buy', userController.buyInvestment);
 router.get('/investments', userController.getInvestments);
+router.get('/referral/stats', userController.getReferralStats);
 
 module.exports = router;
 

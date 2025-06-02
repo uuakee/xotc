@@ -161,6 +161,62 @@ class UserService {
         }
         return investments;
     }
+
+    async getReferralStats(userId) {
+        // Busca os referidos diretos
+        const directReferrals = await this.prisma.referral.findMany({
+            where: { invited_by_id: userId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        realName: true,
+                        level: true,
+                        created_at: true,
+                        wallet: {
+                            select: {
+                                total_investment: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Busca a carteira do usuário para comissões
+        const wallet = await this.prisma.wallet.findFirst({
+            where: { user_id: userId }
+        });
+
+        // Busca as transações de comissão
+        const commissionTransactions = await this.prisma.transaction.findMany({
+            where: {
+                user_id: userId,
+                type: 'COMMISSION'
+            },
+            orderBy: {
+                created_at: 'desc'
+            },
+            take: 10 // Limita a 10 últimas transações
+        });
+
+        // Formata os referidos com dados relevantes
+        const formattedReferrals = directReferrals.map(ref => ({
+            id: ref.user.id,
+            name: ref.user.realName,
+            level: ref.user.level,
+            joined_at: ref.user.created_at,
+            total_invested: ref.user.wallet[0]?.total_investment || 0
+        }));
+
+        return {
+            total_referrals: directReferrals.length,
+            total_commission: wallet?.total_commission || 0,
+            available_commission: wallet?.balance_commission || 0,
+            referrals: formattedReferrals,
+            recent_commissions: commissionTransactions
+        };
+    }
 }
 
 module.exports = new UserService();
