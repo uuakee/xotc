@@ -163,15 +163,23 @@ class UserService {
     }
 
     async getReferralStats(userId) {
-        // Busca os referidos diretos
+        // Busca os referidos diretos e seus usuários
         const directReferrals = await this.prisma.referral.findMany({
             where: { invited_by_id: userId },
             include: {
-                user: {
-                    include: {
-                        wallet: true
-                    }
+                invited_by: true
+            }
+        });
+
+        // Busca os usuários referidos
+        const referredUsers = await this.prisma.user.findMany({
+            where: {
+                id: {
+                    in: directReferrals.map(ref => ref.user_id)
                 }
+            },
+            include: {
+                wallet: true
             }
         });
 
@@ -193,12 +201,12 @@ class UserService {
         });
 
         // Formata os referidos com dados relevantes
-        const formattedReferrals = directReferrals.map(ref => ({
-            id: ref.user.id,
-            name: ref.user.realName,
-            level: ref.user.level,
-            joined_at: ref.user.created_at,
-            total_invested: ref.user.wallet[0]?.total_investment || 0
+        const formattedReferrals = referredUsers.map(user => ({
+            id: user.id,
+            name: user.realName,
+            level: user.level,
+            joined_at: user.created_at,
+            total_invested: user.wallet[0]?.total_investment || 0
         }));
 
         return {
