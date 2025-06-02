@@ -157,7 +157,7 @@ class UserService {
             }
         });
         if (investments.length === 0) {
-            throw new Error('错误: Nenhum investimento encontrado');
+            return [];
         }
         return investments;
     }
