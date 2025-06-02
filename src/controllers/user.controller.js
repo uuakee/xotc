@@ -70,6 +70,16 @@ class UserController {
             return res.status(400).json({ error: error.message });
         }
     }
+
+    async listWithdrawals(req, res) {
+        try {
+            const withdrawals = await userService.listWithdrawals(req.user.id);
+            return res.json(withdrawals);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+    }
+    
 }
 
 module.exports = new UserController(); 

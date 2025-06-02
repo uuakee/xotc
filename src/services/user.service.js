@@ -217,6 +217,15 @@ class UserService {
             recent_commissions: commissionTransactions
         };
     }
+
+    // Listar todos os saques do usuário
+    async listWithdrawals(userId) {
+        const withdrawals = await this.prisma.withdrawal.findMany({
+            where: { user_id: userId },
+            orderBy: { created_at: 'desc' }
+        });
+        return withdrawals;
+    }
 }
 
 module.exports = new UserService();
