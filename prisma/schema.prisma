@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  realName  String
+  phone     String
+  cpf       String
+  password  String
+  is_admin  Boolean  @default(false)
+  level     UserLevel @default(LEVEL_5)
+  points    Int @default(0)
+  referral_code String?
+  invited_by_id String?
+  referral_count Int @default(0)
+
+  is_active Boolean @default(false)
+  last_login DateTime?
+  created_at DateTime @default(now())
+
+  wallet Wallet[]
+  invited_users Referral[] @relation("InvitedByReferral")
+  transactions Transaction[]
+  investment_earnings InvestmentEarnings[]
+  @@map("users")
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  user_id   String
+  balance   Decimal @default(0) @db.Decimal(10, 2)
+  balance_commission Decimal @default(0) @db.Decimal(10, 2)
+  balance_withdrawal Decimal @default(0) @db.Decimal(10, 2)
+  balance_withdrawal_commission Decimal @default(0) @db.Decimal(10, 2)
+  total_withdrawal Decimal @default(0) @db.Decimal(10, 2)
+  total_investment Decimal @default(0) @db.Decimal(10, 2)
+  total_commission Decimal @default(0) @db.Decimal(10, 2)
+  total_deposit Decimal @default(0) @db.Decimal(10, 2)
+  total_deposit_commission Decimal @default(0) @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id])
+  @@map("wallets")
+}
+
+model Plan {
+  id        String   @id @default(uuid())
+  name      String
+  price     Decimal @default(0) @db.Decimal(10, 2)
+  days      Int
+  profit    Decimal @default(0) @db.Decimal(10, 2)
+  max_buy   Int
+  level     UserLevel @default(LEVEL_5)
+  is_active Boolean @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  transactions Transaction[]
+  investments Investment[]
+  investment_earnings InvestmentEarnings[]
+  @@map("plans")
+}
+
+model Referral {
+  id        String   @id @default(uuid())
+  user_id   String
+  invited_by_id String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  invited_by User @relation("InvitedByReferral", fields: [invited_by_id], references: [id])
+
+  @@map("referrals")
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  user_id   String
+  by_user_id String?
+  user User @relation(fields: [user_id], references: [id])
+  amount    Decimal @default(0) @db.Decimal(10, 2)
+  plan_id   String?
+  plan Plan? @relation(fields: [plan_id], references: [id])
+  pix_key String?
+  pix_type PixType?
+  user_document String?
+  
+  status TransactionStatus @default(PENDING)
+
+  type      TransactionType
+  created_at DateTime @default(now())
+  completed_at DateTime?
+
+  @@map("transactions")
+}
+
+model CommissionLevel {
+  id        String   @id @default(uuid())
+  level     UserLevel
+  percentage Decimal @db.Decimal(5, 2)
+  min_referrals Int @default(0)
+  
+  @@map("commission_levels")
+}
+
+model Investment {
+  id        String   @id @default(uuid())
+  user_id   String
+  plan_id   String
+  plan Plan @relation(fields: [plan_id], references: [id])
+  amount    Decimal @default(0) @db.Decimal(10, 2)
+  total_earnings Decimal @default(0) @db.Decimal(10, 2)
+  is_active Boolean @default(true)
+  expires_at DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("investments")
+}
+
+model InvestmentEarnings {
+  id        String   @id @default(uuid())
+  investment_id String
+  plan_id   String
+  plan Plan @relation(fields: [plan_id], references: [id])
+  user_id   String
+  user User @relation(fields: [user_id], references: [id])
+  amount    Decimal @default(0) @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("investment_earnings")
+}
+
+model Gateway {
+  id        String   @id @default(uuid())
+  clypt_uri String?
+  clypt_pk String?
+  clypt_sk String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("gateways")
+}
+
+enum PixType {
+  CPF
+  EMAIL
+  PHONE
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  INVESTMENT
+  COMMISSION
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum UserLevel {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+  LEVEL_5
+}
