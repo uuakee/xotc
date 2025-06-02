@@ -12,6 +12,7 @@ const port = process.env.PORT || 3000;
 // Routes
 const authRoutes = require('./src/routes/auth.route');
 const userRoutes = require('./src/routes/user.route');
+const planRoutes = require('./src/routes/plan.route');
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -21,7 +22,7 @@ const authVersion = 'v1';
 // API Routes
 app.use(`/api/${authVersion}/auth`, authRoutes);
 app.use(`/api/${authVersion}/users`, userRoutes);
-
+app.use(`/api/${authVersion}/plans`, planRoutes);
 app.get('/', (req, res) => {
   res.send('XOTC API - 不要成为入侵者');
 });
