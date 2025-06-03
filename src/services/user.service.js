@@ -143,6 +143,16 @@ class UserService {
                 }
             });
 
+            await tx.investment_earnings.create({
+                data: {
+                    investment_id: investment.id,
+                    amount: plan.price,
+                    type: 'SCHEDULED',
+                    user_id: userId,
+                    plan_id: planId
+                }
+            });
+
             return investment;
         });
 
@@ -226,6 +236,7 @@ class UserService {
         });
         return withdrawals;
     }
+
 }
 
 module.exports = new UserService();

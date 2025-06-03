@@ -5,6 +5,7 @@ const figlet = require('figlet');
 const database = require('./src/config/database');
 const payments = require('./src/config/payments');
 require('dotenv').config();
+require('./src/cron/investment-earnings.cron');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,6 +14,7 @@ const port = process.env.PORT || 3000;
 const authRoutes = require('./src/routes/auth.route');
 const userRoutes = require('./src/routes/user.route');
 const planRoutes = require('./src/routes/plan.route');
+const paymentRoutes = require('./src/routes/payment.route');
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -23,6 +25,7 @@ const authVersion = 'v1';
 app.use(`/api/${authVersion}/auth`, authRoutes);
 app.use(`/api/${authVersion}/users`, userRoutes);
 app.use(`/api/${authVersion}/plans`, planRoutes);
+app.use(`/api/${authVersion}/payments`, paymentRoutes);
 app.get('/', (req, res) => {
   res.send('XOTC API - 不要成为入侵者');
 });

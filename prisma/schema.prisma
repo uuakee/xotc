@@ -135,10 +135,18 @@ model InvestmentEarnings {
   user_id   String
   user User @relation(fields: [user_id], references: [id])
   amount    Decimal @default(0) @db.Decimal(10, 2)
+  type InvestmentEarningsType @default(SCHEDULED)
+  paid_at DateTime?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@map("investment_earnings")
+}
+
+enum InvestmentEarningsType {
+  SCHEDULED
+  PAID
+  UNVALIDATED
 }
 
 model Gateway {
