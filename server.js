@@ -10,22 +10,26 @@ require('./src/cron/investment-earnings.cron');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Versão da API
+const authVersion = process.env.API_VERSION || 'v1';
+
 // Routes
 const authRoutes = require('./src/routes/auth.route');
 const userRoutes = require('./src/routes/user.route');
 const planRoutes = require('./src/routes/plan.route');
 const paymentRoutes = require('./src/routes/payment.route');
+const adminRoutes = require('./src/routes/admin.route');
 
 app.use(cors());
 app.use(bodyParser.json());
 
-const authVersion = 'v1';
-
-// API Routes
+// Rotas da API
 app.use(`/api/${authVersion}/auth`, authRoutes);
 app.use(`/api/${authVersion}/users`, userRoutes);
 app.use(`/api/${authVersion}/plans`, planRoutes);
 app.use(`/api/${authVersion}/payments`, paymentRoutes);
+app.use(`/api/${authVersion}/admin`, adminRoutes);
+
 app.get('/', (req, res) => {
   res.send('XOTC API - 不要成为入侵者');
 });
@@ -33,6 +37,7 @@ app.get('/', (req, res) => {
 const startServer = async () => {
   try {
     await database.connect();
+    console.log('✅ Banco de dados conectado com sucesso!');
     
     // Verifica conexão com gateway de pagamentos
     const gatewayOk = await payments.verifyGatewayConnection();
