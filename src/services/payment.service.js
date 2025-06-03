@@ -109,11 +109,26 @@ class PaymentService {
 
     async handlePaymentCallback(data) {
         try {
-            const metadata = JSON.parse(data.metadata || '{}');
-            const userId = metadata.userId;
-            const type = metadata.type;
+            console.log('Dados recebidos no callback:', data);
+
+            // Verifica se os dados vieram no objeto data
+            const paymentData = data.data || data;
+            
+            let metadata;
+            try {
+                metadata = typeof paymentData.metadata === 'string' 
+                    ? JSON.parse(paymentData.metadata) 
+                    : paymentData.metadata;
+            } catch (error) {
+                console.error('Erro ao parsear metadata:', error);
+                throw new Error('Formato de metadata inválido');
+            }
+
+            const userId = metadata?.userId;
+            const type = metadata?.type;
 
             if (!userId || !type) {
+                console.error('Metadata inválido:', metadata);
                 throw new Error('Dados de metadata inválidos');
             }
 
@@ -134,11 +149,17 @@ class PaymentService {
                 'chargeback': 'CHARGEBACK'
             };
 
-            const internalStatus = statusMap[data.status] || 'PENDING';
-            const amount = data.amount / 100; // Converte de centavos para reais
+            const internalStatus = statusMap[paymentData.status] || 'PENDING';
+            const amount = paymentData.amount / 100; // Converte de centavos para reais
+
+            console.log('Atualizando transação:', {
+                userId,
+                status: internalStatus,
+                amount
+            });
 
             // Atualiza a transação com mais informações
-            await this.prisma.transaction.updateMany({
+            const updatedTransaction = await this.prisma.transaction.updateMany({
                 where: {
                     user_id: userId,
                     type: 'DEPOSIT',
@@ -146,23 +167,27 @@ class PaymentService {
                 },
                 data: {
                     status: internalStatus,
-                    external_id: data.id?.toString(),
-                    payment_method: data.paymentMethod,
+                    external_id: paymentData.id?.toString(),
+                    payment_method: paymentData.paymentMethod,
                     updated_at: new Date(),
-                    paid_at: data.paidAt ? new Date(data.paidAt) : null,
-                    gateway_response: JSON.stringify(data)
+                    paid_at: paymentData.paidAt ? new Date(paymentData.paidAt) : null,
+                    gateway_response: paymentData
                 }
             });
 
+            console.log('Transação atualizada:', updatedTransaction);
+
             // Atualiza a carteira apenas se o pagamento foi aprovado/pago
-            if (['approved', 'paid'].includes(data.status)) {
-                await this.prisma.wallet.updateMany({
+            if (['approved', 'paid'].includes(paymentData.status)) {
+                const updatedWallet = await this.prisma.wallet.updateMany({
                     where: { user_id: userId },
                     data: {
                         balance: { increment: amount },
                         total_deposit: { increment: amount }
                     }
                 });
+
+                console.log('Carteira atualizada:', updatedWallet);
             }
 
             return { 
