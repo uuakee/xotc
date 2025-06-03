@@ -121,34 +121,57 @@ class PaymentService {
                 throw new Error('Tipo de transação não suportado');
             }
 
-            // Atualiza a transação e a carteira apenas se o pagamento foi aprovado
-            if (data.status === 'paid') {
-                await this.prisma.$transaction(async (tx) => {
-                    // Atualiza a transação
-                    await tx.transaction.updateMany({
-                        where: {
-                            user_id: userId,
-                            type: 'DEPOSIT',
-                            status: 'PENDING'
-                        },
-                        data: {
-                            status: 'COMPLETED'
-                        }
-                    });
+            // Mapeia os status do gateway para os status internos
+            const statusMap = {
+                'waiting_payment': 'PENDING',
+                'pending': 'PENDING',
+                'approved': 'COMPLETED',
+                'paid': 'COMPLETED',
+                'refused': 'REFUSED',
+                'in_protest': 'DISPUTED',
+                'refunded': 'REFUNDED',
+                'cancelled': 'CANCELLED',
+                'chargeback': 'CHARGEBACK'
+            };
 
-                    // Atualiza a carteira
-                    await tx.wallet.updateMany({
-                        where: { user_id: userId },
-                        data: {
-                            balance: { increment: data.amount / 100 },
-                            total_deposit: { increment: data.amount / 100 }
-                        }
-                    });
+            const internalStatus = statusMap[data.status] || 'PENDING';
+            const amount = data.amount / 100; // Converte de centavos para reais
+
+            // Atualiza a transação com mais informações
+            await this.prisma.transaction.updateMany({
+                where: {
+                    user_id: userId,
+                    type: 'DEPOSIT',
+                    status: 'PENDING'
+                },
+                data: {
+                    status: internalStatus,
+                    external_id: data.id?.toString(),
+                    payment_method: data.paymentMethod,
+                    updated_at: new Date(),
+                    paid_at: data.paidAt ? new Date(data.paidAt) : null,
+                    gateway_response: JSON.stringify(data)
+                }
+            });
+
+            // Atualiza a carteira apenas se o pagamento foi aprovado/pago
+            if (['approved', 'paid'].includes(data.status)) {
+                await this.prisma.wallet.updateMany({
+                    where: { user_id: userId },
+                    data: {
+                        balance: { increment: amount },
+                        total_deposit: { increment: amount }
+                    }
                 });
             }
 
-            return { success: true };
+            return { 
+                success: true,
+                status: internalStatus,
+                message: `Transação atualizada com sucesso para status: ${internalStatus}`
+            };
         } catch (error) {
+            console.error('Erro no callback:', error);
             throw new Error(`Erro ao processar callback: ${error.message}`);
         }
     }

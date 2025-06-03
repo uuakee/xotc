@@ -93,12 +93,17 @@ model Transaction {
   pix_key String?
   pix_type PixType?
   user_document String?
+  external_id String?
+  payment_method String?
+  gateway_response Json?
   
   status TransactionStatus @default(PENDING)
-
   type      TransactionType
+
   created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   completed_at DateTime?
+  paid_at DateTime?
 
   @@map("transactions")
 }
@@ -178,6 +183,9 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   CANCELLED
+  DISPUTED
+  REFUNDED
+  CHARGEBACK
 }
 
 enum UserLevel {
