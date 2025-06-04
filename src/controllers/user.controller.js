@@ -42,12 +42,19 @@ class UserController {
                 });
             }
 
-            const investment = await userService.buyInvestment(
+            const result = await userService.buyInvestment(
                 req.user.id,
                 plan_id
             );
 
-            return res.status(201).json(investment);
+            return res.status(201).json({
+                success: true,
+                investment: result.investment,
+                commission: result.commissionPaid ? {
+                    amount: result.commissionPaid.amount,
+                    message: `Comissão de ${result.commissionPaid.amount} paga ao usuário que te convidou`
+                } : null
+            });
         } catch (error) {
             return res.status(400).json({ error: error.message });
         }
