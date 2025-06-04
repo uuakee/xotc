@@ -16,4 +16,11 @@ router.get('/transactions', authMiddleware.authenticate, paymentController.listT
 // Callback do gateway (não precisa de autenticação)
 router.post('/callback', paymentController.handleCallback);
 
+// Rota de aprovação de saque (apenas admin)
+router.post('/withdrawal/approve', 
+    authMiddleware.authenticate, 
+    authMiddleware.isAdmin, 
+    paymentController.approveWithdrawal
+);
+
 module.exports = router; 

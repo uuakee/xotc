@@ -55,6 +55,27 @@ class PaymentController {
             return res.status(500).json({ error: error.message });
         }
     }
+
+    async approveWithdrawal(req, res) {
+        try {
+            const { transaction_id } = req.body;
+
+            if (!transaction_id) {
+                return res.status(400).json({ 
+                    error: 'ID da transação é obrigatório' 
+                });
+            }
+
+            const result = await paymentService.approveWithdrawal(
+                transaction_id,
+                req.user.id
+            );
+
+            return res.json(result);
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
 }
 
 module.exports = new PaymentController(); 

@@ -256,6 +256,156 @@ class PaymentService {
             throw new Error(`Erro ao processar saque: ${error.message}`);
         }
     }
+
+    async approveWithdrawal(transactionId, adminId) {
+        try {
+            // Busca a transação
+            const transaction = await this.prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    user: true
+                }
+            });
+
+            if (!transaction) {
+                throw new Error('Transação não encontrada');
+            }
+
+            if (transaction.type !== 'WITHDRAWAL') {
+                throw new Error('Esta transação não é um saque');
+            }
+
+            if (transaction.status !== 'PENDING') {
+                throw new Error('Esta transação não está pendente');
+            }
+
+            // Busca as credenciais do gateway
+            const gateway = await this.prisma.gateway.findFirst();
+            if (!gateway) {
+                throw new Error('Gateway não configurado');
+            }
+
+            // Prepara os dados para a Clypt
+            const credentials = `${gateway.clypt_pk}:${gateway.clypt_sk}`;
+            const base64Credentials = Buffer.from(credentials).toString('base64');
+
+            // Verifica se a URL da API está configurada
+            const apiUrl = process.env.API_URL || 'https://srv.xotc.lat';
+            if (!apiUrl) {
+                throw new Error('URL da API não configurada');
+            }
+
+            console.log('Enviando requisição de saque para Clypt:', {
+                url: `${gateway.clypt_uri}/transfers`,
+                method: 'fiat',
+                amount: transaction.amount * 100, // Converte para centavos
+                pixKeyType: transaction.pix_type.toLowerCase(),
+                pixKey: transaction.pix_key
+            });
+
+            // Faz a requisição para a Clypt
+            const response = await axios({
+                method: 'POST',
+                url: `${gateway.clypt_uri}/transfers`,
+                headers: {
+                    'accept': 'application/json',
+                    'x-withdraw-key': 'wk_8eWyGoWJVOpxd2ZZuQohIqat5Z8cQah7oJmHeiEVPQfMt-PJ',
+                    'authorization': `Basic ${base64Credentials}`,
+                    'content-type': 'application/json'
+                },
+                data: {
+                    method: 'fiat',
+                    amount: transaction.amount * 100,
+                    netPayout: false,
+                    pixKeyType: transaction.pix_type.toLowerCase(),
+                    pixKey: transaction.pix_key,
+                    postbackUrl: `${apiUrl}/api/v1/payments/gateway`,
+                    metadata: JSON.stringify({
+                        userId: transaction.user_id,
+                        transactionId: transaction.id,
+                        type: 'withdrawal'
+                    })
+                }
+            });
+
+            console.log('Resposta da Clypt:', response.data);
+
+            // Atualiza a transação
+            const updatedTransaction = await this.prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    status: 'COMPLETED',
+                    completed_at: new Date(),
+                    by_user_id: adminId,
+                    external_id: response.data.id?.toString(),
+                    gateway_response: response.data
+                }
+            });
+
+            return {
+                success: true,
+                transaction: updatedTransaction,
+                message: 'Saque aprovado e processado com sucesso'
+            };
+        } catch (error) {
+            console.error('Erro ao aprovar saque:', error.response?.data || error);
+            throw new Error(`Erro ao aprovar saque: ${error.message}`);
+        }
+    }
+
+    async handleWithdrawalCallback(data) {
+        try {
+            console.log('Dados recebidos no callback de saque:', data);
+
+            const paymentData = data.data || data;
+            let metadata;
+            
+            try {
+                metadata = typeof paymentData.metadata === 'string' 
+                    ? JSON.parse(paymentData.metadata) 
+                    : paymentData.metadata;
+            } catch (error) {
+                console.error('Erro ao parsear metadata:', error);
+                throw new Error('Formato de metadata inválido');
+            }
+
+            const { userId, transactionId, type } = metadata;
+
+            if (!userId || !transactionId || type !== 'withdrawal') {
+                throw new Error('Dados de metadata inválidos');
+            }
+
+            // Mapeia os status do gateway para os status internos
+            const statusMap = {
+                'pending': 'PENDING',
+                'processing': 'PENDING',
+                'completed': 'COMPLETED',
+                'failed': 'FAILED',
+                'cancelled': 'CANCELLED'
+            };
+
+            const internalStatus = statusMap[paymentData.status] || 'PENDING';
+
+            // Atualiza a transação
+            await this.prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    status: internalStatus,
+                    gateway_response: paymentData,
+                    updated_at: new Date()
+                }
+            });
+
+            return {
+                success: true,
+                status: internalStatus,
+                message: `Callback de saque processado: ${internalStatus}`
+            };
+        } catch (error) {
+            console.error('Erro no callback de saque:', error);
+            throw new Error(`Erro ao processar callback de saque: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new PaymentService(); 
