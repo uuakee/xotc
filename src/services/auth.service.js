@@ -82,7 +82,7 @@ class AuthService {
         is_active: true,
         wallet: {
           create: {
-            balance: 0
+            balance: 10
           }
         }
       },
