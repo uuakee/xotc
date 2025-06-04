@@ -79,6 +79,7 @@ class AuthService {
       data: {
         ...userData,
         password: hashedPassword,
+        is_active: true,
         wallet: {
           create: {
             balance: 0
