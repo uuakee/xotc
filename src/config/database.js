@@ -1,37 +1,45 @@
 const { PrismaClient } = require('@prisma/client');
 
-let prisma = null;
+console.log('🔍 Iniciando configuração do banco de dados...');
 
-const initializePrisma = () => {
-  if (!prisma) {
-    try {
-      prisma = new PrismaClient({
-        log: ['warn', 'error'],
-        errorFormat: 'pretty'
-      });
-      console.log('✅ Prisma Client inicializado com sucesso!');
-    } catch (error) {
-      console.error('❌ Erro ao inicializar Prisma Client:', error);
-      throw error;
-    }
+let prismaClient = null;
+
+const createPrismaClient = () => {
+  try {
+    console.log('🔧 Criando novo Prisma Client...');
+    prismaClient = new PrismaClient({
+      log: ['warn', 'error'],
+      errorFormat: 'pretty'
+    });
+    console.log('✅ Prisma Client criado com sucesso!');
+    return prismaClient;
+  } catch (error) {
+    console.error('❌ Erro ao criar Prisma Client:', error);
+    throw error;
   }
-  return prisma;
 };
 
 class Database {
   constructor() {
+    console.log('🏗️  Inicializando classe Database...');
+    
     if (Database.instance) {
+      console.log('🔄 Retornando instância existente do Database');
       return Database.instance;
     }
-    
-    this.prisma = initializePrisma();
+
+    this.prisma = createPrismaClient();
     Database.instance = this;
+    console.log('✅ Instância do Database criada com sucesso!');
   }
 
   async connect() {
     try {
+      console.log('🔌 Tentando conectar ao banco de dados...');
+      
       if (!this.prisma) {
-        this.prisma = initializePrisma();
+        console.log('⚠️  Prisma client não encontrado, criando novo...');
+        this.prisma = createPrismaClient();
       }
       
       await this.prisma.$connect();
@@ -54,9 +62,14 @@ class Database {
   }
 
   getClient() {
+    console.log('🔍 Obtendo cliente Prisma...');
+    
     if (!this.prisma) {
-      this.prisma = initializePrisma();
+      console.log('⚠️  Prisma client não encontrado, criando novo...');
+      this.prisma = createPrismaClient();
     }
+    
+    console.log('✅ Cliente Prisma obtido com sucesso!');
     return this.prisma;
   }
 }
@@ -64,10 +77,13 @@ class Database {
 // Adiciona handler de desconexão ao processo
 process.on('beforeExit', async () => {
   console.log('🔌 Desconectando do banco de dados...');
-  if (prisma) {
-    await prisma.$disconnect();
+  if (prismaClient) {
+    await prismaClient.$disconnect();
   }
 });
 
-// Exporta uma instância única do banco de dados
-module.exports = new Database();
+// Cria e exporta a instância
+console.log('📤 Exportando instância do Database...');
+const databaseInstance = new Database();
+
+module.exports = databaseInstance;
