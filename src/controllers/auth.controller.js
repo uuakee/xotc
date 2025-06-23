@@ -26,22 +26,12 @@ class AuthController {
         });
       }
 
-      let invited_by_id = null;
-      if (referral_code) {
-        const inviter = await prisma.user.findFirst({
-          where: { referral_code }
-        });
-        if (inviter) {
-          invited_by_id = inviter.id;
-        }
-      }
-
       const result = await authService.register({
         realName,
         cpf,
         phone,
         password,
-        invited_by_id
+        referral_code
       });
 
       return res.status(201).json(result);
