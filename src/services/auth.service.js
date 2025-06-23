@@ -73,14 +73,31 @@ class AuthService {
       throw new Error('错误:CPF ou telefone já cadastrado');
     }
 
+    // Se tiver referral_code, busca o usuário que convidou
+    let invited_by_id = null;
+    if (userData.referral_code) {
+      const inviter = await this.prisma.user.findFirst({
+        where: { referral_code: userData.referral_code }
+      });
+      
+      if (inviter) {
+        invited_by_id = inviter.id;
+      } else {
+        throw new Error('错误:Código de convite inválido');
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
-        ...userData,
+        realName: userData.realName,
+        cpf: userData.cpf,
+        phone: userData.phone,
         password: hashedPassword,
         is_active: true,
         referral_code: "0x" + Math.random().toString(36).substring(2, 10).toUpperCase(),
+        invited_by_id: invited_by_id,
         wallet: {
           create: {
             balance: 10
@@ -93,17 +110,17 @@ class AuthService {
     });
 
     // Se tiver código de convite, cria o referral
-    if (userData.invited_by_id) {
+    if (invited_by_id) {
       await this.prisma.referral.create({
         data: {
           user_id: user.id,
-          invited_by_id: userData.invited_by_id
+          invited_by_id: invited_by_id
         }
       });
 
       // Incrementa contador de referrals do convidador
       await this.prisma.user.update({
-        where: { id: userData.invited_by_id },
+        where: { id: invited_by_id },
         data: {
           referral_count: {
             increment: 1
