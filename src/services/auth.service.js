@@ -80,6 +80,7 @@ class AuthService {
         ...userData,
         password: hashedPassword,
         is_active: true,
+        referral_code: "0x" + Math.random().toString(36).substring(2, 10).toUpperCase(),
         wallet: {
           create: {
             balance: 10
