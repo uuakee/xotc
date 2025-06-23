@@ -16,8 +16,19 @@ class AuthService {
     }
   }
 
+  // Método auxiliar para garantir que o Prisma está disponível
+  getPrisma() {
+    if (!this.prisma) {
+      console.log('⚠️  Prisma não encontrado, recriando...');
+      this.prisma = database.getClient();
+    }
+    return this.prisma;
+  }
+
   async login(cpf, password) {
-    const user = await this.prisma.user.findFirst({
+    const prisma = this.getPrisma();
+    
+    const user = await prisma.user.findFirst({
       where: { cpf },
       include: {
         wallet: true
@@ -38,7 +49,7 @@ class AuthService {
     }
 
     // Atualiza último login
-    await this.prisma.user.update({
+    await prisma.user.update({
       where: { id: user.id },
       data: { last_login: new Date() }
     });
@@ -77,9 +88,11 @@ class AuthService {
       hasReferralCode: !!userData.referral_code 
     });
 
+    const prisma = this.getPrisma();
+
     try {
       console.log('🔍 Verificando usuário existente...');
-      const existingUser = await this.prisma.user.findFirst({
+      const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
             { cpf: userData.cpf },
@@ -96,7 +109,7 @@ class AuthService {
       let invited_by_id = null;
       if (userData.referral_code) {
         console.log('🔍 Buscando usuário pelo referral_code:', userData.referral_code);
-        const inviter = await this.prisma.user.findFirst({
+        const inviter = await prisma.user.findFirst({
           where: { referral_code: userData.referral_code }
         });
         
@@ -112,7 +125,7 @@ class AuthService {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
 
       console.log('👤 Criando usuário no banco...');
-      const user = await this.prisma.user.create({
+      const user = await prisma.user.create({
         data: {
           realName: userData.realName,
           cpf: userData.cpf,
@@ -137,7 +150,7 @@ class AuthService {
       // Se tiver código de convite, cria o referral
       if (invited_by_id) {
         console.log('🔗 Criando registro de referral...');
-        await this.prisma.referral.create({
+        await prisma.referral.create({
           data: {
             user_id: user.id,
             invited_by_id: invited_by_id
@@ -146,7 +159,7 @@ class AuthService {
 
         console.log('📊 Incrementando contador de referrals...');
         // Incrementa contador de referrals do convidador
-        await this.prisma.user.update({
+        await prisma.user.update({
           where: { id: invited_by_id },
           data: {
             referral_count: {
