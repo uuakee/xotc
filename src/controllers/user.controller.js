@@ -78,6 +78,15 @@ class UserController {
         }
     }
 
+    async getReferralCode(req, res) {
+        try {
+            const referralCode = await userService.getReferralCode(req.user.id);
+            return res.json(referralCode);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+    }
+
     async listWithdrawals(req, res) {
         try {
             const withdrawals = await userService.listWithdrawals(req.user.id);

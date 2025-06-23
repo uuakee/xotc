@@ -293,6 +293,14 @@ class UserService {
         };
     }
 
+    async getReferralCode(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { referral_code: true }
+        });
+        return { referral_code: user?.referral_code };
+    }
+
     // Listar todos os saques do usuário
     async listWithdrawals(userId) {
         const withdrawals = await this.prisma.transaction.findMany({
